@@ -5,9 +5,9 @@ This is the repository of the referee box for the RoCKIn competition (http://roc
 
 
 ## Installation
-The RoCKIn Central Factory Hub (CFH) can be installed on most linux distributions. However, some require dependencies being built from source. We support and test on Ubuntu LTS versions. The current recommended setup is Ubuntu 14.04, with Boost 1.54. For other setups, jump to the Alternative Setup section below
+The RoCKIn Central Factory Hub (CFH) can be installed on most linux distributions. However, some require dependencies being built from source. The current recommended setup is Ubuntu 14.04, with Boost 1.54. We support and test on Ubuntu 14.04 LTS. For other non-supported distributions and setups see Alternative Installation Hints at the end of this readme.
 
-### Recommended Setup: Ubuntu 14.04, Boost 1.54
+### Officially Supported Setup: Ubuntu 14.04, Boost 1.54
 
 1. The CFH is based off LLSF refbox, and uses [clips](http://clipsrules.sourceforge.net/). Add [Tim's PPA](https://launchpad.net/~timn/+archive/ubuntu/clips) for clips:
       
@@ -37,20 +37,6 @@ The RoCKIn Central Factory Hub (CFH) can be installed on most linux distribution
         
         cd at_work_central_factory_hub
 
-6. Apply the following patch
-    
-        diff --git a/src/refbox/Makefile b/src/refbox/Makefile
-        index aa05696..bd92a5c 100644
-        --- a/src/refbox/Makefile
-        +++ b/src/refbox/Makefile
-        @@ -39,7 +39,7 @@ ifeq ($(HAVE_PROTOBUF)$(HAVE_LIBMODBUS)$(HAVE_CLIPS)$(HAVE_BOOST_LIBS),1111)
-           CFLAGS  += $(CFLAGS_PROTOBUF) $(CFLAGS_LIBMODBUS) $(CFLAGS_CLIPS) $(CFLAGS_MONGODB) \
-                     $(call boost-libs-cflags,$(REQ_BOOST_LIBS))
-        -  LDFLAGS += $(LDFLAGS_PROTOBUF) $(LDFLAGS_LIBMODBUS) $(LDFLAGS_CLIPS) $(LDFLAGS_MONGODB) \
-        +  LDFLAGS += $(LDFLAGS_PROTOBUF) $(LDFLAGS_LIBMODBUS) $(LDFLAGS_CLIPS) \
-                     $(call boost-libs-ldflags,$(REQ_BOOST_LIBS))
-        #MANPAGES_all =  $(MANDIR)/man1/llsf-refbox.1
-
 7. Make the CFH project
         
         make
@@ -58,8 +44,55 @@ The RoCKIn Central Factory Hub (CFH) can be installed on most linux distribution
 8. Go to Configuration Section before running the CFH.
 
 
-### Alternative Setup
-The CFH is known to work on several versions of Ubuntu, and ArchLinux. But the combinations of dependencies is very large, and they may cause conflicts. Users with alternative setups are assumed to be aware of their system dependencies.
+## Configuration
+
+Full configuration details and explainations are found in the PDF documentation (https://github.com/rockin-robot-challenge/at_work_central_factory_hub_doc). 
+
+Only a few common options are outlined here.
+
+1. Configure the CFH with your editor
+    
+        editor ./cfg/config.yaml
+
+    For testing the following changes are common:
+    - Change the CFH IP address in section "shell", this should be where you're running the CFH. Other machines communicating with the CFH need this value set correctly.
+        
+            refbox-host: !ipv4 localhost
+    - disable mongodb, all messages will be logged and in early developement this may not be desired:
+        
+            enable: false
+    - If testing on the same machine as the CFH is running, toggle the comments on "port" or "send-port" and "recv-port". To run the rockin-viewer and rockin-controller on the same machine, change in the section "public-peer", to run the robot on the same machine, the TeamName-peer secion must be edited.
+    
+        ```    
+        #port: !udp-port 4444
+        send-port: !udp-port 4444
+        recv-port: !udp-port 4445
+        ```
+
+
+## Run the RoCKIn@Work Central Factory Hub
+
+    ./bin/llsf-refbox
+    
+
+## FAQ
+
+**Q:** I get the following error after executing the make command: 
+
+    /usr/include/mongo/client/../util/net/../../db/../util/../db/mongomutex.h:235:9: error: call of overloaded ‘msgasserted(int, std::basic_string<char>)’ is ambiguous
+    
+How can I solve the problem?
+    
+**A:** Please apply the following patch: https://12286394519788571250.googlegroups.com/attach/8d1000635e6a8fa8/mongomutex.patch?part=0.1&view=1&vt=ANaJVrHyLNIISBTuORhFBABOAVPN-88t-nVX0FUuzvgxk8-w6O181B7fkE5fJsyydUHwq1vpbUzDvqvP3GFhuBFc8-EjaOnoLds8eox2JDGrk4FasLzQc_I
+
+------------------------------------
+
+## Unsupported Installations
+The CFH is known to work on several versions of Ubuntu, and ArchLinux. But the combinations of dependencies is very large, and they may cause conflicts. Users with alternative setups are assumed to be aware of their system dependencies. 
+
+### Alternative Installation Hints
+
+Users attempting to use alternative, unsupported systems are doing so without any guarentees. These are just hints.
 
 1. To install the RoCKIn referee box, please read and install the prerequisites of the LLSF referee box which are described here:
    
@@ -90,94 +123,3 @@ The CFH is known to work on several versions of Ubuntu, and ArchLinux. But the c
 4. Compiling the refbox:
     
         make
-
-
-## Configuration
-
-1. Configure the CFH with your editor
-    
-        editor ./cfg/config.yaml
-
-    For testing the following changes are common:
-    - Change the CFH IP address in section "shell"
-        
-            refbox-host: !ipv4 localhost
-    - disable mongodb:
-        
-            enable: false
-    - If testing on the same machine as the CFH is running, toggle the comments on "port" or "send-port" and "recv-port". To run the rockin-viewer and rockin-controller on the same machine, change in the section "public-peer", to run the robot on the same machine, the TeamName-peer secion must be edited.
-    
-        ```    
-        #port: !udp-port 4444
-        send-port: !udp-port 4444
-        recv-port: !udp-port 4445
-        ```
-
-
-## Run the RoCKIn@Work Central Factory Hub
-
-    ./bin/llsf-refbox
-    
-
-## FAQ
-
-**Q:** I get the following error after executing the make command: 
-
-    === Linking llsf-refbox ---
-    /usr/bin/ld: /usr/lib/gcc/x86_64-linux-gnu/4.6/../../../../lib/libmongoclient.a(md5main.o): undefined reference to symbol 'sin@@GLIBC_2.2.5'
-    /usr/bin/ld: note: 'sin@@GLIBC_2.2.5' is defined in DSO /usr/lib/gcc/x86_64-linux-gnu/4.6/../../../x86_64-linux-gnu/libm.so so try adding it to the linker command line
-    /usr/lib/gcc/x86_64-linux-gnu/4.6/../../../x86_64-linux-gnu/libm.so: could not read symbols: Invalid operation
-    collect2: ld returned 1 exit status
-    
-How can I solve the problem?
-
-**A:** Please apply the following patch (Makefile Patch) and re ```make```:
-
-    diff --git a/src/refbox/Makefile b/src/refbox/Makefile
-    index aa05696..bd92a5c 100644
-    --- a/src/refbox/Makefile
-    +++ b/src/refbox/Makefile
-    @@ -39,7 +39,7 @@ ifeq ($(HAVE_PROTOBUF)$(HAVE_LIBMODBUS)$(HAVE_CLIPS)$(HAVE_BOOST_LIBS),1111)
-       CFLAGS  += $(CFLAGS_PROTOBUF) $(CFLAGS_LIBMODBUS) $(CFLAGS_CLIPS) $(CFLAGS_MONGODB) \
-                 $(call boost-libs-cflags,$(REQ_BOOST_LIBS))
-    -  LDFLAGS += $(LDFLAGS_PROTOBUF) $(LDFLAGS_LIBMODBUS) $(LDFLAGS_CLIPS) $(LDFLAGS_MONGODB) \
-    +  LDFLAGS += $(LDFLAGS_PROTOBUF) $(LDFLAGS_LIBMODBUS) $(LDFLAGS_CLIPS) \
-                 $(call boost-libs-ldflags,$(REQ_BOOST_LIBS))
-    #MANPAGES_all =  $(MANDIR)/man1/llsf-refbox.1
- 
- ------------------------------------
-
-**Q:** I get an error complaining about duplicate sock exception
-    
-    Attempt to add global initializer failed, status: DuplicateKey throwSockExcepAttempt to add global initializer failed, status: DuplicateKey throwSockExcep...
-
-**A:** Apply the Makefile Patch above, then run ```make```
-
-**Q:** I get an error at execution time about a singleton class
-
-    alex@LinuxDesktop../at_work_central_factory_hub$ ./bin/llsf-refbox 
-    Mon Oct 19 02:48:31 Assertion: 10352:Security is a singleton class
-    0x63e5a3 0x6380f3 0x636cab 0x587233 0x655a5d 0x7fc2655cfe35 0x587c05 
-      ./bin/llsf-refbox(_ZN5mongo15printStackTraceERSo+0x23) [0x63e5a3]
-      ./bin/llsf-refbox(_ZN5mongo11msgassertedEiPKc+0x93) [0x6380f3]
-      ./bin/llsf-refbox() [0x636cab]
-      ./bin/llsf-refbox() [0x587233]
-      ./bin/llsf-refbox(__libc_csu_init+0x5d) [0x655a5d]
-      /lib/x86_64-linux-gnu/libc.so.6(__libc_start_main+0x85) [0x7fc2655cfe35]
-      ./bin/llsf-refbox() [0x587c05]
-    terminate called after throwing an instance of 'mongo::MsgAssertionException'
-      what():  Security is a singleton class
-    Aborted (core dumped)
-
-**A:** Apply the Makefile Patch above, then run ```make```
-
-**Q:** I get the following error after executing the make command: 
-
-    /usr/include/mongo/client/../util/net/../../db/../util/../db/mongomutex.h:235:9: error: call of overloaded ‘msgasserted(int, std::basic_string<char>)’ is ambiguous
-    
-How can I solve the problem?
-    
-**A:** Please apply the following patch: https://12286394519788571250.googlegroups.com/attach/8d1000635e6a8fa8/mongomutex.patch?part=0.1&view=1&vt=ANaJVrHyLNIISBTuORhFBABOAVPN-88t-nVX0FUuzvgxk8-w6O181B7fkE5fJsyydUHwq1vpbUzDvqvP3GFhuBFc8-EjaOnoLds8eox2JDGrk4FasLzQc_I
-
-------------------------------------
-
