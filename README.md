@@ -5,21 +5,18 @@ This is the repository of the referee box for the RoCKIn competition (http://roc
 
 
 ## Installation
-The RoCKIn Central Factory Hub (CFH) can be installed on most linux distributions. However, some require dependencies being built from source. The current recommended setup is Ubuntu 14.04, with Boost 1.54. We support and test on Ubuntu 14.04 LTS. For other non-supported distributions and setups see Alternative Installation Hints at the end of this readme.
+The RoCKIn Central Factory Hub (CFH) can be installed on most Linux distributions. However, some require dependencies being built from source. The currently supported setup is Ubuntu 14.04, with Boost 1.54. For other non-supported distributions and setups see Alternative Installation Hints at the end of this readme.
 
 ### Officially Supported Setup: Ubuntu 14.04, Boost 1.54
 
-1. The CFH is based off LLSF refbox, and uses [clips](http://clipsrules.sourceforge.net/). Add [Tim's PPA](https://launchpad.net/~timn/+archive/ubuntu/clips) for clips:
+1. Add [Tim Niemueller's PPA](https://launchpad.net/~timn/+archive/ubuntu/clips):
       
         sudo add-apt-repository ppa:timn/clips
-    (Note: This PPA is maintained by the developers of the LLSF referee box. And only works for Ubuntu 12.04, 12.10 and 14.04. For others, see Alternative Setup.)
+    (Note: This PPA currently only works for Ubuntu 12.04, 12.10 and 14.04.)
     
-2. Update apt:
+2. Install the dependencies for both LLSFRB and CFH:
         
         sudo apt-get update
-
-3. Install the dependencies for both LLSFRB and CFH
-        
         sudo apt-get install libmodbus-dev libclips-dev clips libclipsmm-dev \
                              protobuf-compiler libprotobuf-dev libprotoc-dev \
                              boost1.54-all-dev libmodbus-dev \
@@ -27,21 +24,19 @@ The RoCKIn Central Factory Hub (CFH) can be installed on most linux distribution
                              libncursesw5-dev libyaml-cpp-dev libavahi-client-dev git \
                              libssl-dev libelf-dev mongodb-dev mongodb-clients \
                              mongodb libzmq3-dev
-    (Note: Boost 1.54 is specified to avoid causing apt-get broken package problems with ROS. If you are using another version of Boost see Alternative Setup.)
 
-4. Clone the CFH repo
+     (Note: Boost 1.54 is specified to avoid causing apt-get broken package problems with ROS. If you are using another version of Boost see Alternative Setup.)
+
+3. Clone this repository:
         
         git clone https://github.com/rockin-robot-challenge/at_work_central_factory_hub.git
 
-5. Enter the CFH repo
+4. Build the Central Factory Hub:
         
         cd at_work_central_factory_hub
-
-7. Make the CFH project
-        
         make
 
-8. Go to Configuration Section before running the CFH.
+5. Go to Configuration Section before running the CFH.
 
 
 ## Configuration
@@ -58,17 +53,29 @@ Only a few common options are outlined here.
     - Change the CFH IP address in section "shell", this should be where you're running the CFH. Other machines communicating with the CFH need this value set correctly.
         
             refbox-host: !ipv4 localhost
-    - disable mongodb, all messages will be logged and in early developement this may not be desired:
+    - disable mongodb (No messages will be logged):
         
-            enable: false
-    - If testing on the same machine as the CFH is running, toggle the comments on "port" or "send-port" and "recv-port". To run the rockin-viewer and rockin-controller on the same machine, change in the section "public-peer", to run the robot on the same machine, the TeamName-peer secion must be edited.
+            mongodb:
+              enable: false
+    - If the robot software or CFH clients (e.g. GUIs) are running on the same machine as the CFH (e.g. local testing), toggle the comments on "port" or "send-port" and "recv-port". Use "port" when communicating between different machines, use "send-port" and "recv-port" when communicating with the same machine.
+      - For CFH Clients the "path" of the configuation properties is "llsfrb/comm/public-peer"
     
         ```    
-        #port: !udp-port 4444
-        send-port: !udp-port 4444
-        recv-port: !udp-port 4445
+        public-peer:
+          host: !ipv4 192.168.1.255
+          #port: !udp-port 4444
+          send-port: !udp-port 4444
+          recv-port: !udp-port 4445
         ```
+      - For CFH Peers (robots) the "path" of the configuration properties is "llsfrb/comm/[TeamName]-peer" 
 
+        ```
+        RobOTTO-peer:
+          host: !ipv4 192.168.1.255
+          #port: !udp-port 4448
+          send-port: !udp-port 4448
+          recv-port: !udp-port 4449
+        ```
 
 ## Run the RoCKIn@Work Central Factory Hub
 
@@ -94,7 +101,7 @@ The CFH is known to work on several versions of Ubuntu, and ArchLinux. But the c
 
 Users attempting to use alternative, unsupported systems are doing so without any guarentees. These are just hints.
 
-1. To install the RoCKIn referee box, please read and install the prerequisites of the LLSF referee box which are described here:
+1. To install the RoCKIn Central Factory Hub, please read and install the prerequisites of the LLSF referee box which are described here:
    
     (Note: You MAY NOT be able to copy and paste from the following link. Ubuntu and Fedora instructions are provided. However, The instructions contain specific package versions, which are not available on all versions of Ubuntu. Search your package manager to find required versions.)
     
@@ -112,14 +119,6 @@ Users attempting to use alternative, unsupported systems are doing so without an
             
             cd /usr/local/include/
             sudo wget https://raw.githubusercontent.com/zeromq/cppzmq/master/zmq.hpp
-    - boost 1.48+ (http://www.boost.org/) It is STRONGLY recommended to install boost through your package manager, and to choose the version which does not conflict with your other dependencies (i.e. ROS)
+    - boost 1.48+ (http://www.boost.org/) It is STRONGLY recommended to install boost through your package manager, and to choose the version which does not conflict with your other dependencies.
   
-4. Cloning the Git repository:
-    
-        git clone https://github.com/rockin-robot-challenge/at_work_central_factory_hub.git
-        cd at_work_central_factory_hub
-        git checkout rockin
-
-4. Compiling the refbox:
-    
-        make
+4. Clone and build this repository as described above.
