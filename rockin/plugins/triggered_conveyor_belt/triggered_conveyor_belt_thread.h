@@ -36,6 +36,7 @@ class TriggeredConveyorBeltThread : public fawkes::Thread, public fawkes::Loggin
 {
     public:
         TriggeredConveyorBeltThread();
+        ~TriggeredConveyorBeltThread();
 
         virtual void init();
         virtual void loop();

@@ -36,6 +36,13 @@
 TriggeredConveyorBeltThread::TriggeredConveyorBeltThread() :
         Thread("TriggeredConveyorBeltThread", Thread::OPMODE_CONTINUOUS), zmq_context_(NULL), zmq_publisher_(NULL), zmq_subscriber_(NULL), cfg_timer_interval_(40), default_network_interface_("eth0")
 {
+  conveyor_mutex_ = new fawkes::Mutex();
+  camera_mutex_ = new fawkes::Mutex();
+}
+
+TriggeredConveyorBeltThread::~TriggeredConveyorBeltThread(){
+   delete conveyor_mutex_;
+   delete camera_mutex_;
 }
 
 void TriggeredConveyorBeltThread::init()
@@ -81,13 +88,18 @@ void TriggeredConveyorBeltThread::init()
     {
         logger->log_warn("TriggeredConveyorBelt", "Cannot establish communication with the conveyor belt: %s", e.what());
 
-        delete zmq_context_;
-        delete zmq_publisher_;
-        delete zmq_subscriber_;
-
-        zmq_context_ = NULL;
-        zmq_publisher_ = NULL;
-        zmq_subscriber_ = NULL;
+        if (zmq_context_ != NULL) {
+          delete zmq_context_;
+          zmq_context_ = NULL;
+        }
+        if (zmq_publisher_ != NULL) {
+          delete zmq_publisher_;
+          zmq_publisher_ = NULL;
+        }
+        if (zmq_subscriber_ != NULL) {
+          delete zmq_subscriber_;
+          zmq_subscriber_ = NULL;
+        }
     }
 
     fawkes::MutexLocker lock(clips_mutex);
@@ -109,36 +121,31 @@ void TriggeredConveyorBeltThread::init()
 
 void TriggeredConveyorBeltThread::finalize()
 {
+  if (zmq_context_ != NULL) {
     delete zmq_context_;
-    delete zmq_publisher_;
-    delete zmq_subscriber_;
-
     zmq_context_ = NULL;
+  }
+  if (zmq_publisher_ != NULL) {
+    delete zmq_publisher_;
     zmq_publisher_ = NULL;
+  }
+  if (zmq_subscriber_ != NULL) {
+    delete zmq_subscriber_;
     zmq_subscriber_ = NULL;
+  }
 }
 
 void TriggeredConveyorBeltThread::loop()
 {
+    receiveAndBufferStatusMsgs();
     // unconditional sleep
     boost::this_thread::sleep(boost::posix_time::milliseconds(cfg_timer_interval_));
-    receiveAndBufferStatusMsgs();
-
-    fawkes::MutexLocker ml(camera_mutex_);
-    std::string detected_plate;
-    detected_plate = last_camera_status_msg_.state();
-    // let CLIPS know about the plate by asserting it as a fact
-    std::stringstream sstr;
-    sstr << "(quality-control-camera-object " << detected_plate << ")";
-
-    fawkes::MutexLocker lock(clips_mutex);
-    clips->assert_fact(sstr.str());
 
 }
 
 bool TriggeredConveyorBeltThread::clips_is_belt_running()
 {
-    fawkes::MutexLocker ml(conveyor_mutex_);
+    //fawkes::MutexLocker ml(conveyor_mutex_);
 
     if (last_conveyor_status_msg_.has_mode()
         && last_conveyor_status_msg_.mode() == START)
@@ -150,7 +157,7 @@ bool TriggeredConveyorBeltThread::clips_is_belt_running()
 
 bool TriggeredConveyorBeltThread::clips_is_belt_connected()
 {
-    fawkes::MutexLocker ml(conveyor_mutex_);
+    //fawkes::MutexLocker ml(conveyor_mutex_);
 
     if (last_conveyor_status_msg_.has_is_device_connected()
         && last_conveyor_status_msg_.is_device_connected())
@@ -162,7 +169,7 @@ bool TriggeredConveyorBeltThread::clips_is_belt_connected()
 
 bool TriggeredConveyorBeltThread::clips_is_camera_connected()
 {
-    fawkes::MutexLocker ml(camera_mutex_);
+    //f/awkes::MutexLocker ml(camera_mutex_);
 
     if (last_camera_status_msg_.has_is_device_connected()
         && last_camera_status_msg_.is_device_connected())
@@ -184,7 +191,7 @@ void TriggeredConveyorBeltThread::clips_stop_belt()
 
 void TriggeredConveyorBeltThread::setConveyorBeltRunMode(RunMode mode)
 {
-    fawkes::MutexLocker ml(conveyor_mutex_);
+    //fawkes::MutexLocker ml(conveyor_mutex_);
     boost::posix_time::time_duration time_diff;
 
     // prevent sending to many messages to the device
@@ -223,20 +230,38 @@ void TriggeredConveyorBeltThread::setConveyorBeltRunMode(RunMode mode)
 
 void TriggeredConveyorBeltThread::receiveAndBufferStatusMsgs()
 {
-    fawkes::MutexLocker camera_lock(camera_mutex_);
-    fawkes::MutexLocker conveyor_lock(conveyor_mutex_);
+    //fawkes::MutexLocker camera_lock(camera_mutex_);
+    //fawkes::MutexLocker conveyor_lock(conveyor_mutex_);
+    fawkes::MutexLocker clips_lock(clips_mutex);
     if (zmq_subscriber_->recv(&zmq_incomming_msg_, ZMQ_NOBLOCK))
     {
         if(last_camera_status_msg_.ParseFromArray(zmq_incomming_msg_.data(),
                                                   zmq_incomming_msg_.size()))
         {
+
+          if(last_camera_status_msg_.has_state()){
           // remember time of last received msg
           prev_camera_update_timestamp_ = boost::posix_time::microsec_clock::local_time();
-        }
 
+          //fawkes::MutexLocker ml(camera_mutex_);
+          QualityControlCameraStatus::State detected_plate;
+          detected_plate = last_camera_status_msg_.state();
+          logger->log_warn("TriggeredConveyorBelt", "DETECTED PLATE %d", detected_plate);
+          // let CLIPS know about the plate by asserting it as a fact
+          std::stringstream sstr;
+          sstr << "(quality-control-camera-object " << detected_plate << ")";
+
+
+          fawkes::MutexLocker lock(clips_mutex);
+          clips->assert_fact(sstr.str());
+          }
+        }
         if (last_conveyor_status_msg_.ParseFromArray(zmq_incomming_msg_.data(),
                                                      zmq_incomming_msg_.size()))
         {
+
+          logger->log_warn("TriggeredConveyorBelt", "SANTOSH 2");
+
             prev_conveyor_update_timestamp_ = boost::posix_time::microsec_clock::local_time();
         }
 
@@ -246,7 +271,7 @@ void TriggeredConveyorBeltThread::receiveAndBufferStatusMsgs()
     if (camera_time_diff.total_seconds() >= 3)
     {
         last_camera_status_msg_.set_is_device_connected(false);
-        last_camera_status_msg_.set_state(QualityControlCameraStatus::UNKNOWN_PLATE);
+        //last_camera_status_msg_.set_state(QualityControlCameraStatus::UNKNOWN_PLATE);
     }
 
     boost::posix_time::time_duration conveyor_time_diff = boost::posix_time::microsec_clock::local_time()
